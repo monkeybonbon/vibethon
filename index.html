@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Интерактивное техническое задание антихакатона: система управления умным складом на Python.">
+  <title>Антихакатон: Умный склад</title>
+  <style>
+    :root {
+      --bg: #07100f;
+      --panel: #0d1918;
+      --panel-2: #101f1e;
+      --line: #213c39;
+      --text: #e8f2ef;
+      --muted: #92aaa5;
+      --green: #60f0a5;
+      --green-2: #1fc77a;
+      --blue: #63c9ff;
+      --amber: #ffc968;
+      --red: #ff7e86;
+      --shadow: 0 24px 80px rgba(0, 0, 0, .28);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 85% -5%, rgba(40, 178, 138, .13), transparent 30rem),
+        linear-gradient(rgba(84, 180, 151, .025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(84, 180, 151, .025) 1px, transparent 1px),
+        var(--bg);
+      background-size: auto, 32px 32px, 32px 32px, auto;
+      font: 16px/1.65 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    a { color: inherit; }
+    button { font: inherit; }
+    .mono, code, pre, .eyebrow, .badge, .stat, .status-line { font-family: "Cascadia Code", Consolas, monospace; }
+
+    .wrap { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid rgba(99, 201, 255, .12);
+      background: rgba(7, 16, 15, .84);
+      backdrop-filter: blur(16px);
+    }
+    .topbar .wrap { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { text-decoration: none; font-weight: 800; letter-spacing: -.02em; }
+    .brand span { color: var(--green); }
+    nav { display: flex; gap: 22px; }
+    nav a { color: var(--muted); font-size: 14px; text-decoration: none; transition: color .2s; }
+    nav a:hover, nav a:focus-visible { color: var(--green); }
+
+    header { padding: 88px 0 52px; }
+    .eyebrow { color: var(--green); font-size: 12px; text-transform: uppercase; letter-spacing: .16em; }
+    h1 { max-width: 850px; margin: 14px 0 15px; font-size: clamp(42px, 7vw, 78px); line-height: 1.02; letter-spacing: -.055em; }
+    .lead { max-width: 760px; margin: 0 0 24px; color: #b8cbc7; font-size: clamp(18px, 2.3vw, 23px); line-height: 1.5; }
+    .badges { display: flex; flex-wrap: wrap; gap: 9px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #c7d8d4;
+      background: rgba(16, 31, 30, .7);
+      font-size: 12px;
+    }
+    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); }
+
+    section { scroll-margin-top: 80px; padding: 50px 0; }
+    .section-kicker { margin: 0 0 7px; color: var(--green); font: 12px/1.4 "Cascadia Code", Consolas, monospace; letter-spacing: .13em; text-transform: uppercase; }
+    h2 { margin: 0 0 12px; font-size: clamp(29px, 4vw, 44px); line-height: 1.15; letter-spacing: -.035em; }
+    h3 { margin: 0 0 10px; font-size: 19px; line-height: 1.3; }
+    p { margin: 0 0 16px; }
+    .intro { max-width: 790px; color: var(--muted); }
+
+    .demo-shell {
+      margin-top: 28px;
+      overflow: hidden;
+      border: 1px solid #394540;
+      border-radius: 10px;
+      background: #090c0b;
+      box-shadow: 0 28px 90px rgba(0, 0, 0, .48), 0 0 0 1px rgba(255,255,255,.025);
+    }
+    .terminal-bar { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 13px; border-bottom: 1px solid #313633; background: linear-gradient(#272c29, #1b1f1d); }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #35504c; }
+    .dot:first-child { background: #ff7e86; }
+    .dot:nth-child(2) { background: var(--amber); }
+    .dot:nth-child(3) { background: var(--green); }
+    .terminal-title { flex: 1; margin-left: 7px; color: #b4bcb8; text-align: center; font: 11px "Cascadia Code", Consolas, monospace; }
+    .terminal-actions { color: #818985; font: 12px "Cascadia Code", Consolas, monospace; letter-spacing: .25em; }
+    .terminal-command { padding: 12px 18px 10px; border-bottom: 1px solid #202724; color: #d5ddd9; background: #090c0b; font: 12px/1.5 "Cascadia Code", Consolas, monospace; }
+    .terminal-command .prompt-user { color: var(--green); }
+    .terminal-command .prompt-path { color: var(--blue); }
+    .terminal-command .cursor { display: inline-block; width: 7px; height: 1.05em; margin-left: 3px; vertical-align: -.18em; background: #b9c4bf; animation: blink 1.05s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .demo-body { display: block; background: #090c0b; }
+    .map-panel { padding: 18px; border-right: 0; }
+    .demo-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .status-line { color: var(--green); font-size: 11px; }
+    .status-line::before { content: "["; color: #68726d; margin-right: 2px; }
+    .status-line::after { content: "]"; color: #68726d; margin-left: 2px; }
+    .warehouse-grid {
+      display: grid;
+      width: 100%;
+      max-width: 500px;
+      aspect-ratio: 21 / 15.6;
+      overflow: hidden;
+      border: 0;
+      border-radius: 0;
+      background: #090c0b;
+    }
+    .cell {
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      color: #3e4b46;
+      font: 700 clamp(9px, 3.6vw, 22px)/1 "Cascadia Code", Consolas, monospace;
+      transition: color .1s, text-shadow .1s;
+    }
+    .cell.wall { color: #73817b; background: transparent; }
+    .cell.floor { color: #303b37; }
+    .cell.item { color: var(--amber); background: transparent; text-shadow: 0 0 10px rgba(255,201,104,.4); }
+    .cell.exit { color: var(--blue); background: transparent; text-shadow: 0 0 10px rgba(99,201,255,.45); }
+    .cell.robot { color: var(--green); background: transparent; box-shadow: none; transform: none; border-radius: 0; text-shadow: 0 0 9px rgba(96,240,165,.8); }
+    .cell.trail { color: #426158; background: transparent; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 13px; color: var(--muted); font: 11px "Cascadia Code", Consolas, monospace; }
+    .legend b { color: var(--text); }
+    .caption { margin: 16px 0 0; color: var(--muted); font-size: 13px; }
+
+    .console-panel { display: flex; flex-direction: column; min-width: 0; padding: 18px; }
+    .order-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 13px; }
+    .stat { padding: 5px 8px 8px; border: 0; border-left: 2px solid #46514c; border-radius: 0; background: transparent; color: #6f7b76; font-size: 10px; }
+    .stat strong { display: block; overflow: hidden; color: #d4ddd9; font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
+    .log {
+      flex: 1;
+      min-height: 250px;
+      max-height: 310px;
+      overflow: auto;
+      margin: 0;
+      padding: 15px;
+      border: 0;
+      border-top: 1px dashed #35403b;
+      border-radius: 0;
+      color: #b0bab5;
+      background: #090c0b;
+      font: 12px/1.75 "Cascadia Code", Consolas, monospace;
+      white-space: pre-wrap;
+    }
+    .log .ok { color: var(--green); }
+    .log .info { color: var(--blue); }
+    .log .warn { color: var(--amber); }
+    .map-switcher { display: flex; align-items: center; gap: 8px; margin-bottom: 13px; }
+    .map-name { flex: 1; min-width: 0; color: #cdd7d2; font: 11px "Cascadia Code", Consolas, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .map-arrow { width: 29px; height: 27px; padding: 0; cursor: pointer; color: #aeb8b3; border: 1px solid #4b5751; border-radius: 2px; background: transparent; font: 14px "Cascadia Code", Consolas, monospace; }
+    .map-arrow:hover { color: var(--green); border-color: var(--green-2); }
+    .map-random { width: 100%; margin: -3px 0 13px; padding: 7px 10px; cursor: pointer; color: var(--blue); border: 1px dashed #3c6475; border-radius: 2px; background: rgba(99,201,255,.035); font: 10px "Cascadia Code", Consolas, monospace; text-transform: uppercase; letter-spacing: .04em; }
+    .map-random:hover { color: #dff5ff; border-color: var(--blue); background: rgba(99,201,255,.09); }
+    .robot-lines { display: grid; gap: 5px; margin: 9px 0 13px; color: #82908a; font: 11px/1.4 "Cascadia Code", Consolas, monospace; }
+    .robot-lines span { display: flex; justify-content: space-between; gap: 10px; }
+    .robot-lines b { color: var(--green); font-weight: 500; }
+    .order-form { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 0 2px; border-top: 1px dashed #35403b; }
+    .terminal-prompt { flex: none; color: var(--green); font: 12px "Cascadia Code", Consolas, monospace; }
+    .order-input { min-width: 0; flex: 1; padding: 4px 0; color: #edf5f1; border: 0; border-radius: 0; outline: 0; caret-color: var(--green); background: transparent; font: 12px "Cascadia Code", Consolas, monospace; }
+    .order-input:focus { box-shadow: none; }
+    .order-input::placeholder { color: #59635e; }
+    .queue-line { min-height: 20px; margin-bottom: 10px; color: #77827d; font: 10px/1.5 "Cascadia Code", Consolas, monospace; }
+    .queue-line strong { color: var(--amber); font-weight: 500; }
+    .terminal-hint { margin-top: 7px; color: #505b56; font: 9px/1.5 "Cascadia Code", Consolas, monospace; }
+    .runtime-summary { margin: 9px 0; color: #718079; font: 10px "Cascadia Code", Consolas, monospace; }
+    .runtime-summary b { color: #c4cec9; font-weight: 500; }
+    .controls { display: flex; gap: 10px; margin-top: 13px; padding-top: 12px; border-top: 1px dashed #35403b; }
+    .btn { cursor: pointer; border-radius: 2px; padding: 9px 13px; font: 700 11px "Cascadia Code", Consolas, monospace; text-transform: uppercase; letter-spacing: .025em; transition: color .15s, background .15s, opacity .15s; }
+    .btn:hover:not(:disabled) { transform: none; filter: none; }
+    .btn:focus-visible { outline: 3px solid rgba(99,201,255,.35); outline-offset: 2px; }
+    .btn:disabled { cursor: wait; opacity: .55; }
+    .btn-primary { flex: 1; color: var(--green); border: 1px solid var(--green-2); background: rgba(31,199,122,.07); }
+    .btn-primary:hover:not(:disabled) { color: #07100f; background: var(--green); }
+    .btn-secondary { color: #aeb8b3; border: 1px solid #56605b; background: transparent; }
+    .btn-secondary:hover:not(:disabled) { color: #fff; background: #29302d; }
+
+    .task-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; margin-top: 28px; }
+    .card { grid-column: span 6; padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, rgba(16, 31, 30, .92), rgba(10, 21, 20, .92)); }
+    .card.wide { grid-column: 1 / -1; }
+    .card.third { grid-column: span 4; }
+    .num { display: inline-grid; place-items: center; width: 28px; height: 28px; margin-bottom: 14px; border: 1px solid rgba(96,240,165,.3); border-radius: 8px; color: var(--green); background: rgba(96,240,165,.07); font: 12px "Cascadia Code", Consolas, monospace; }
+    .card p, .card li { color: #afc2bd; }
+    ul, ol { margin: 10px 0 0; padding-left: 20px; }
+    li + li { margin-top: 7px; }
+    code { padding: 2px 5px; border-radius: 4px; color: var(--green); background: rgba(96,240,165,.08); font-size: .9em; }
+    pre { overflow-x: auto; margin: 14px 0 0; padding: 17px; border: 1px solid var(--line); border-radius: 11px; color: #c2d6d0; background: #07110f; font-size: 13px; line-height: 1.65; }
+    .steps { counter-reset: step; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; padding: 0; list-style: none; }
+    .steps li { position: relative; min-height: 102px; padding: 36px 11px 11px; border: 1px solid var(--line); border-radius: 10px; color: #aabdb8; background: #0b1716; font-size: 12px; }
+    .steps li::before { counter-increment: step; content: counter(step, decimal-leading-zero); position: absolute; top: 10px; left: 11px; color: var(--green); font: 10px "Cascadia Code", Consolas, monospace; }
+
+    .requirements { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 28px; }
+    .req { padding: 21px; border-top: 2px solid var(--green-2); border-radius: 3px 3px 14px 14px; background: var(--panel); }
+    .req:nth-child(even) { border-color: var(--blue); }
+    .req p { margin: 0; color: var(--muted); font-size: 14px; }
+    .check-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0 30px; margin-top: 23px; padding: 22px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+    .check-list div { position: relative; padding: 10px 0 10px 26px; color: #b7cac5; }
+    .check-list div::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-weight: 800; }
+    .notice { margin-top: 24px; padding: 22px 24px; border: 1px solid rgba(255, 201, 104, .28); border-radius: var(--radius); background: rgba(255, 201, 104, .055); }
+    .notice h3 { color: var(--amber); }
+    .notice p { margin: 0; color: #c4c9b9; }
+    .bonus-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+    .bonus-card { position: relative; padding: 22px 78px 22px 22px; overflow: hidden; border: 1px solid rgba(255,201,104,.3); border-radius: var(--radius); background: linear-gradient(135deg, rgba(255,201,104,.075), rgba(13,25,24,.8)); }
+    .bonus-card h3 { color: #f2dfb4; }
+    .bonus-card p { margin: 0; color: var(--muted); font-size: 14px; }
+    .bonus-score { position: absolute; top: 18px; right: 18px; color: var(--amber); font: 800 20px "Cascadia Code", Consolas, monospace; }
+    .final-callout { padding: 28px; border: 1px solid rgba(99,201,255,.28); border-radius: var(--radius); background: linear-gradient(120deg, rgba(99,201,255,.08), rgba(96,240,165,.05)); font-size: 18px; }
+    .criteria { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+    .criteria span { padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; color: #b9cbc7; background: rgba(7,16,15,.55); font-size: 13px; }
+    footer { padding: 45px 0 60px; color: var(--muted); border-top: 1px solid var(--line); }
+    footer .wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .to-top { text-decoration: none; color: var(--green); }
+
+    @media (max-width: 850px) {
+      .demo-body { display: block; }
+      .map-panel { border-right: 0; }
+      .card, .card.third { grid-column: 1 / -1; }
+      .requirements { grid-template-columns: 1fr 1fr; }
+      .steps { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 620px) {
+      .wrap { width: min(100% - 24px, 1120px); }
+      nav a:nth-child(2), nav a:nth-child(3) { display: none; }
+      header { padding-top: 60px; }
+      .demo-body { display: block; }
+      .map-panel, .console-panel { padding: 14px; }
+      .warehouse-grid { aspect-ratio: 21 / 15.6; }
+      .requirements, .check-list { grid-template-columns: 1fr; }
+      .bonus-grid { grid-template-columns: 1fr; }
+      .controls { flex-direction: column; }
+      .order-form { flex-wrap: nowrap; }
+      .steps { grid-template-columns: 1fr 1fr; }
+      footer .wrap { align-items: flex-start; flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body id="top">
+  <div class="topbar">
+    <div class="wrap">
+      <a class="brand" href="#top"><span>&gt;_</span> smart_warehouse</a>
+      <nav aria-label="Навигация по заданию">
+        <a href="#demo">Демонстрация</a>
+        <a href="#task">Задача</a>
+        <a href="#requirements">Требования</a>
+        <a href="#check">Проверка</a>
+      </nav>
+    </div>
+  </div>
+
+  <header class="wrap">
+    <div class="eyebrow">Техническое задание // 01</div>
+    <h1>Антихакатон:<br>Умный склад</h1>
+    <p class="lead">Разработайте систему управления роботами на автоматизированном складе.</p>
+    <div class="badges" aria-label="Условия участия">
+      <span class="badge">Python</span>
+      <span class="badge">Команда 3 человека</span>
+      <span class="badge">Можно использовать LLM</span>
+      <span class="badge">Консольное приложение</span>
+    </div>
+  </header>
+
+  <main>
+    <section id="demo">
+      <div class="wrap">
+        <p class="section-kicker">Интерактивный пример</p>
+        <h2>Как может выглядеть программа</h2>
+        <p class="intro">Введите номер товара и отправьте заказ. Свободный робот заберёт его и отвезёт в зону выдачи, а новые задания можно добавлять прямо во время движения.</p>
+
+        <div class="demo-shell">
+          <div class="terminal-bar" aria-hidden="true">
+            <i class="dot"></i><i class="dot"></i><i class="dot"></i>
+            <span class="terminal-title">warehouse_demo.py — Terminal</span>
+            <span class="terminal-actions">− □ ×</span>
+          </div>
+          <div class="terminal-command" aria-hidden="true"><span class="prompt-user">operator@warehouse</span>:<span class="prompt-path">~/control</span>$ python warehouse_demo.py <span class="cursor"></span></div>
+          <div class="demo-body">
+            <div class="map-panel">
+              <div class="demo-head">
+                <strong class="mono" id="mapName">КАРТА 1 / ЦИКЛЫ</strong>
+                <span class="status-line" id="status">ГОТОВ</span>
+              </div>
+              <div class="warehouse-grid" id="warehouse" role="img" aria-label="Лабиринт склада с роботом, товарами и зоной выдачи"></div>
+              <div class="legend" aria-label="Условные обозначения">
+                <span><b>█</b> стеллаж</span><span><b>·</b> проход</span><span><b>R</b> робот</span><span><b>1–9</b> товары</span><span><b>E</b> выдача</span>
+              </div>
+              <div class="robot-lines"><span>ROBOT <b id="robot1State">свободен</b></span></div>
+              <div class="log" id="log" aria-live="polite"><span class="info">[system]</span> Карта загружена
+<span class="info">[stock]</span> Доступные номера: 1, 2, 3
+<span class="ok">[ready]</span> Введите номер товара</div>
+              <div class="runtime-summary">выполнено: <b id="doneValue">0</b> · в очереди: <b id="queueValue">0</b></div>
+              <div class="queue-line" id="queueLine">QUEUE: <strong>пусто</strong></div>
+              <form class="order-form" id="orderForm">
+                <label class="terminal-prompt" for="orderInput">warehouse&gt;</label>
+                <input class="order-input" id="orderInput" type="text" maxlength="12" autocomplete="off" spellcheck="false" aria-label="Команда или номер товара" placeholder="введите номер товара или команду">
+              </form>
+              <div class="terminal-hint">команды: random · reset · help</div>
+              <p class="caption">Это только пример визуализации. Вы можете реализовать консольный интерфейс иначе.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="task">
+      <div class="wrap">
+        <p class="section-kicker">Техническое задание</p>
+        <h2>Система управления складом</h2>
+        <p class="intro">Вы разрабатываете систему управления автоматизированным складом. На складе находятся товары, стеллажи, роботы и зона выдачи заказов. Роботы должны самостоятельно находить нужные товары и доставлять их в зону выдачи.</p>
+        <p class="intro">Ваша задача — написать на Python программу, которая управляет работой склада и выполняет поступающие заказы.</p>
+
+        <div class="task-grid">
+          <article class="card">
+            <span class="num">01</span>
+            <h3>Карта склада</h3>
+            <p>Склад — лабиринт из клеток. Коридоры имеют ширину ровно в одну клетку.</p>
+            <ul>
+              <li><code>#</code> — стена или стеллаж, <code>.</code> — проход;</li>
+              <li><code>1</code>, <code>2</code>, <code>3</code>… — номера товаров;</li>
+              <li><code>R</code> — робот, <code>E</code> — зона выдачи.</li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="num">02</span>
+            <h3>Правила движения</h3>
+            <p>Робот ходит вверх, вниз, влево или вправо. Нельзя проходить через стены, выходить за пределы карты или занимать одну клетку двумя роботами.</p>
+            <p>Роботы также не могут проходить друг сквозь друга.</p>
+          </article>
+          <article class="card wide">
+            <span class="num">03</span>
+            <h3>Заказы</h3>
+            <p>Номер каждого нового заказа вводит пользователь во время работы программы:</p>
+            <pre><code>product_number = input("Введите номер товара: ")</code></pre>
+            <p>Если оба робота заняты, новый заказ сохраняется в очереди и будет обработан позже.</p>
+            <ol class="steps">
+              <li>Найти нужный товар</li>
+              <li>Построить оптимальный маршрут</li>
+              <li>Доехать до товара</li>
+              <li>Забрать товар</li>
+              <li>Найти путь к выдаче</li>
+              <li>Доставить товар</li>
+              <li>Перейти к заказу</li>
+            </ol>
+            <p>Если заказ выполнить невозможно, программа должна сообщить об ошибке, не упасть и продолжить работу.</p>
+          </article>
+          <article class="card">
+            <span class="num">04</span>
+            <h3>Дополнительный уровень</h3>
+            <p>За дополнительные баллы можно добавить несколько роботов. Система должна определять исполнителя заказа, не допускать столкновений и ставить заказы в очередь, если все роботы заняты.</p>
+            <p>Конкретный алгоритм координации — часть вашего решения.</p>
+          </article>
+          <article class="card">
+            <span class="num">05</span>
+            <h3>Генерация данных</h3>
+            <p>Карта, расположение товаров и стартовый набор заказов создаются случайно. Новые заказы также можно вводить интерактивно — они образуют очередь.</p>
+            <p>Сгенерированные данные должны быть отделены от основной логики, чтобы новый склад не требовал изменения кода управления.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="requirements">
+      <div class="wrap">
+        <p class="section-kicker">Обязательная часть</p>
+        <h2>Что должно работать</h2>
+        <p class="intro">Способ реализации выбираете вы. В финальной версии должны присутствовать следующие возможности.</p>
+        <div class="requirements">
+          <article class="req"><h3>Случайная карта</h3><p>При каждом запуске программа генерирует новую корректную карту склада, а не выбирает её из готового набора.</p></article>
+          <article class="req"><h3>Случайные товары и заказы</h3><p>Расположение товаров на карте и стартовый набор заказов формируются случайно. Пользователь может добавлять новые заказы во время работы.</p></article>
+          <article class="req"><h3>Оптимальный маршрут</h3><p>Робот должен находить кратчайший доступный путь до товара и от товара до зоны выдачи.</p></article>
+          <article class="req"><h3>Доставка</h3><p>Получение товара, путь к зоне выдачи и завершение заказа.</p></article>
+          <article class="req"><h3>Поток заказов</h3><p>Интерактивный ввод, очередь и обработка невозможных запросов без падений.</p></article>
+          <article class="req"><h3>Анимация и итог</h3><p>Перерисовка консоли на каждом шаге и итоговая статистика.</p></article>
+        </div>
+
+        <div class="task-grid">
+          <article class="card wide">
+            <h3>Консольная анимация обязательна</h3>
+            <p>Между шагами программа очищает или перерисовывает консоль, выводит актуальную карту и положение робота. Также видны текущий заказ и состояние робота.</p>
+            <pre><code>Заказ: 2
+Робот → товар 2
+
+███████████████
+█··R··█····1·█
+███·█·█████·██
+█···█··2··█··█
+█·██████·████·█
+█·······█··E·█
+███████████████</code></pre>
+            <p>Цветной вывод не требуется, но может стать дополнительным плюсом.</p>
+          </article>
+        </div>
+
+        <div class="notice">
+          <h3>Ограничения</h3>
+          <p>Python · команда из 3 человек · разрешено использовать LLM и стандартную библиотеку Python · разрешены знакомые алгоритмы поиска пути · сторонние библиотеки допустимы, но не требуются · карта, товары и заказы генерируются случайно · решение должно корректно работать при каждом новом запуске.</p>
+        </div>
+        <p class="section-kicker" style="margin-top: 28px">Усложнения на дополнительную оценку</p>
+        <div class="bonus-grid" aria-label="Усложнения на дополнительную оценку">
+          <article class="bonus-card">
+            <span class="bonus-score">5+</span>
+            <h3>Несколько роботов</h3>
+            <p>Корректная работа нескольких роботов и очередь заказов, когда все роботы заняты.</p>
+          </article>
+          <article class="bonus-card">
+            <span class="bonus-score">5+</span>
+            <h3>Приоритеты заказов</h3>
+            <p>Обычные и срочные заказы, перестроение очереди и выполнение срочного заказа раньше менее приоритетных.</p>
+          </article>
+          <article class="bonus-card">
+            <span class="bonus-score">5+</span>
+            <h3>Заряд аккумулятора</h3>
+            <p>Расход энергии на движение, зарядная станция и планирование поездки без остановки робота посреди маршрута.</p>
+          </article>
+          <article class="bonus-card">
+            <span class="bonus-score">5+</span>
+            <h3>Изменения во время работы</h3>
+            <p>Временная блокировка прохода или поломка клетки с безопасным поиском нового маршрута и продолжением работы.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="check">
+      <div class="wrap">
+        <p class="section-kicker">Финальная проверка</p>
+        <h2>Новая карта. Новые заказы.</h2>
+        <div class="final-callout">В конце антихакатона программа должна сгенерировать новую карту, случайно разместить товары, сформировать новый набор заказов и корректно выполнить их.</div>
+        <div class="check-list" aria-label="Критерии проверки">
+          <div>Корректность работы</div>
+          <div>Количество выполненных заказов</div>
+          <div>Отсутствие падений</div>
+          <div>Корректная генерация случайной карты</div>
+          <div>Количество шагов</div>
+          <div>Качество организации проекта</div>
+        </div>
+        <div class="notice">
+          <h3>Будьте готовы к изменениям требований</h3>
+          <p>Во время антихакатона заказчик может изменить требования к системе. Новые условия будут объявляться отдельно. Хорошее решение должно быть возможно развивать без полного переписывания проекта.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Антихакатон · Техническое задание «Умный склад»</span>
+      <a class="to-top" href="#top">↑ Наверх</a>
+    </div>
+  </footer>
+
+  <script type="application/x-smart-warehouse-legacy">
+    (() => {
+      'use strict';
+
+      const W = 21, H = 13;
+      const start = { x: 1, y: 1 };
+      const exit = { x: W - 2, y: H - 2 };
+      const orders = ['A', 'B', 'A', 'C'];
+      const goods = new Map();
+      const gridEl = document.getElementById('warehouse');
+      const logEl = document.getElementById('log');
+      const statusEl = document.getElementById('status');
+      const orderEl = document.getElementById('orderValue');
+      const doneEl = document.getElementById('doneValue');
+      const runBtn = document.getElementById('runBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const stepDelay = reducedMotion ? 35 : 260;
+      let map = [];
+      let robot = { ...start };
+      let orderIndex = 0;
+      let totalSteps = 0;
+      let running = false;
+      let generation = 0;
+      let carrying = '';
+      let trail = new Set();
+
+      const key = p => `${p.x},${p.y}`;
+      const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+      function makeMaze() {
+        const maze = Array.from({ length: H }, () => Array(W).fill('#'));
+        const stack = [{ ...start }];
+        maze[start.y][start.x] = '.';
+        // Fixed seed/order: stable, connected maze with one-cell-wide corridors.
+        let seed = 739391;
+        const random = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+        while (stack.length) {
+          const cur = stack[stack.length - 1];
+          const candidates = [[2,0],[-2,0],[0,2],[0,-2]]
+            .map(([dx,dy]) => ({ x: cur.x + dx, y: cur.y + dy, dx, dy }))
+            .filter(p => p.x > 0 && p.x < W - 1 && p.y > 0 && p.y < H - 1 && maze[p.y][p.x] === '#');
+          if (!candidates.length) { stack.pop(); continue; }
+          const next = candidates[Math.floor(random() * candidates.length)];
+          maze[cur.y + next.dy / 2][cur.x + next.dx / 2] = '.';
+          maze[next.y][next.x] = '.';
+          stack.push({ x: next.x, y: next.y });
+        }
+        return maze;
+      }
+
+      function findLegacyPath(from, to) {
+        const queue = [{ ...from }];
+        const seen = new Set([key(from)]);
+        const prev = new Map();
+        for (let i = 0; i < queue.length; i++) {
+          const p = queue[i];
+          if (p.x === to.x && p.y === to.y) {
+            const path = [];
+            let cursor = key(to);
+            while (cursor !== key(from)) {
+              const [x, y] = cursor.split(',').map(Number);
+              path.push({ x, y });
+              cursor = prev.get(cursor);
+            }
+            return path.reverse();
+          }
+          for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+            const n = { x: p.x + dx, y: p.y + dy };
+            if (n.x < 0 || n.y < 0 || n.x >= W || n.y >= H || map[n.y][n.x] === '#' || seen.has(key(n))) continue;
+            seen.add(key(n));
+            prev.set(key(n), key(p));
+            queue.push(n);
+          }
+        }
+        return null;
+      }
+
+      function placeObjects() {
+        goods.clear();
+        const floor = [];
+        for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+          if (map[y][x] === '.' && !(x === start.x && y === start.y) && !(x === exit.x && y === exit.y)) floor.push({ x, y });
+        }
+        // Spread goods over three distant regions of the guaranteed-connected maze.
+        const ranked = floor.map(p => ({ p, d: findLegacyPath(start, p).length })).sort((a, b) => b.d - a.d);
+        const picks = [ranked[0].p, ranked[Math.floor(ranked.length * .32)].p, ranked[Math.floor(ranked.length * .64)].p];
+        ['A', 'B', 'C'].forEach((name, i) => goods.set(name, picks[i]));
+      }
+
+      function render() {
+        gridEl.style.gridTemplateColumns = `repeat(${W}, 1fr)`;
+        const fragment = document.createDocumentFragment();
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+          const cell = document.createElement('span');
+          const posKey = `${x},${y}`;
+          cell.className = map[y][x] === '#' ? 'cell wall' : 'cell floor';
+          cell.textContent = map[y][x] === '#' ? '█' : '·';
+          if (trail.has(posKey) && map[y][x] !== '#') cell.classList.add('trail');
+          if (x === exit.x && y === exit.y) { cell.textContent = 'E'; cell.classList.add('exit'); }
+          for (const [name, p] of goods) {
+            if (p.x === x && p.y === y) { cell.textContent = name; cell.classList.add('item'); }
+          }
+          if (robot.x === x && robot.y === y) { cell.textContent = carrying ? 'R' : 'R'; cell.className = 'cell robot'; }
+          fragment.appendChild(cell);
+        }
+        gridEl.replaceChildren(fragment);
+      }
+
+      function setStatus(text) { statusEl.textContent = text; }
+      function log(text, type = '') {
+        const line = document.createElement('div');
+        if (type) line.className = type;
+        line.textContent = text;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      async function move(path, token) {
+        for (const point of path) {
+          if (token !== generation) return false;
+          trail.add(key(robot));
+          robot = { ...point };
+          totalSteps++;
+          render();
+          await sleep(stepDelay);
+        }
+        return true;
+      }
+
+      async function runOrder() {
+        if (running) return;
+        if (orderIndex >= orders.length) {
+          log('Все демонстрационные заказы выполнены.', 'ok');
+          setStatus('ОЧЕРЕДЬ ЗАВЕРШЕНА');
+          return;
+        }
+        running = true;
+        const token = generation;
+        const item = orders[orderIndex];
+        const target = goods.get(item);
+        runBtn.disabled = true;
+        setStatus(`ЗАКАЗ ${item}`);
+        log(`\n[order] Заказ: ${item}`, 'info');
+        log('[route] Робот ищет маршрут...');
+        const toItem = findLegacyPath(robot, target);
+        if (!toItem) {
+          log(`[error] Товар ${item} недоступен. Переходим дальше.`);
+          orderIndex++;
+        } else {
+          log(`[move] Робот движется к товару ${item}`);
+          if (!await move(toItem, token)) return;
+          carrying = item;
+          log(`[pick] Товар ${item} получен`, 'ok');
+          goods.delete(item);
+          render();
+          await sleep(stepDelay * 1.5);
+          const toExit = findLegacyPath(robot, exit);
+          log('[move] Робот движется к зоне выдачи');
+          if (!toExit || !await move(toExit || [], token)) return;
+          carrying = '';
+          orderIndex++;
+          log(`[done] Заказ выполнен за ${toItem.length + toExit.length} шагов`, 'ok');
+          // Demo stock is replenished so repeated letters in the queue remain valid.
+          goods.set(item, target);
+        }
+        if (token !== generation) return;
+        doneEl.textContent = `${orderIndex} / ${orders.length}`;
+        orderEl.textContent = orders[orderIndex] || '—';
+        setStatus(orderIndex < orders.length ? 'ГОТОВ К СЛЕДУЮЩЕМУ' : `ГОТОВО · ${totalSteps} ШАГОВ`);
+        runBtn.textContent = orderIndex < orders.length ? 'Запустить следующий заказ' : 'Все заказы выполнены';
+        runBtn.disabled = orderIndex >= orders.length;
+        running = false;
+        render();
+      }
+
+      function reset() {
+        generation++;
+        running = false;
+        map = makeMaze();
+        robot = { ...start };
+        orderIndex = 0;
+        totalSteps = 0;
+        carrying = '';
+        trail = new Set();
+        placeObjects();
+        orderEl.textContent = orders[0];
+        doneEl.textContent = `0 / ${orders.length}`;
+        setStatus('ГОТОВ');
+        runBtn.disabled = false;
+        runBtn.textContent = 'Запустить демонстрацию';
+        logEl.innerHTML = '<span class="info">[system]</span> Карта загружена\n<span class="info">[system]</span> Заказы: A, B, A, C\n<span class="ok">[ready]</span> Нажмите «Запустить демонстрацию»';
+        render();
+      }
+
+      runBtn.addEventListener('click', runOrder);
+      resetBtn.addEventListener('click', reset);
+      reset();
+    })();
+  </script>
+  <script>
+    (() => {
+      'use strict';
+
+      const W = 21, H = 13;
+      const variants = [
+        { name: 'КАРТА 1 / ЦИКЛЫ', note: 'кольцевые маршруты', seed: 739391, loops: 16, isolated: false },
+        { name: 'КАРТА 2 / ТУПИКИ', note: 'узкие ветви и тупики', seed: 184729, loops: 0, isolated: false },
+        { name: 'КАРТА 3 / ИЗОЛЯЦИЯ', note: 'товар №9 недоступен', seed: 925771, loops: 12, isolated: true }
+      ];
+      const gridEl = document.getElementById('warehouse');
+      const logEl = document.getElementById('log');
+      const statusEl = document.getElementById('status');
+      const doneEl = document.getElementById('doneValue');
+      const queueValueEl = document.getElementById('queueValue');
+      const queueLineEl = document.getElementById('queueLine');
+      const mapNameEl = document.getElementById('mapName');
+      const orderForm = document.getElementById('orderForm');
+      const orderInput = document.getElementById('orderInput');
+      const robotStateEls = [document.getElementById('robot1State')];
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const stepDelay = reducedMotion ? 30 : 230;
+      const key = p => `${p.x},${p.y}`;
+      const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+      let variantIndex = 0;
+      let map = [];
+      let products = new Map();
+      let robots = [];
+      let exitPoint = { x: W - 2, y: H - 2 };
+      let orderQueue = [];
+      let completed = 0;
+      let failed = 0;
+      let generation = 0;
+      let orderSequence = 0;
+      let reservations = new Map();
+      let trail = new Set();
+
+      function makeMaze(config) {
+        const result = Array.from({ length: H }, () => Array(W).fill('#'));
+        const stack = [{ x: 1, y: 1 }];
+        result[1][1] = '.';
+        let seed = config.seed;
+        const random = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+        while (stack.length) {
+          const current = stack[stack.length - 1];
+          const choices = [[2,0],[-2,0],[0,2],[0,-2]]
+            .map(([dx, dy]) => ({ x: current.x + dx, y: current.y + dy, dx, dy }))
+            .filter(p => p.x > 0 && p.x < W - 1 && p.y > 0 && p.y < H - 1 && result[p.y][p.x] === '#');
+          if (!choices.length) { stack.pop(); continue; }
+          const next = choices[Math.floor(random() * choices.length)];
+          result[current.y + next.dy / 2][current.x + next.dx / 2] = '.';
+          result[next.y][next.x] = '.';
+          stack.push({ x: next.x, y: next.y });
+        }
+        const connectors = [];
+        for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+          if (result[y][x] !== '#' || (x % 2) === (y % 2)) continue;
+          const horizontal = result[y][x - 1] === '.' && result[y][x + 1] === '.';
+          const vertical = result[y - 1][x] === '.' && result[y + 1][x] === '.';
+          if (horizontal || vertical) connectors.push({ x, y });
+        }
+        for (let i = connectors.length - 1; i > 0; i--) {
+          const j = Math.floor(random() * (i + 1));
+          [connectors[i], connectors[j]] = [connectors[j], connectors[i]];
+        }
+        connectors.slice(0, config.loops).forEach(p => { result[p.y][p.x] = '.'; });
+        return result;
+      }
+
+      function findRoute(from, to, blocked = new Set()) {
+        if (!from || !to || map[to.y]?.[to.x] === '#') return null;
+        const queue = [{ ...from }];
+        const seen = new Set([key(from)]);
+        const previous = new Map();
+        for (let index = 0; index < queue.length; index++) {
+          const point = queue[index];
+          if (point.x === to.x && point.y === to.y) {
+            const path = [];
+            let cursor = key(to);
+            while (cursor !== key(from)) {
+              const [x, y] = cursor.split(',').map(Number);
+              path.push({ x, y });
+              cursor = previous.get(cursor);
+            }
+            return path.reverse();
+          }
+          for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+            const next = { x: point.x + dx, y: point.y + dy };
+            const nextKey = key(next);
+            if (next.x < 0 || next.y < 0 || next.x >= W || next.y >= H || map[next.y][next.x] === '#' || blocked.has(nextKey) || seen.has(nextKey)) continue;
+            seen.add(nextKey);
+            previous.set(nextKey, key(point));
+            queue.push(next);
+          }
+        }
+        return null;
+      }
+
+      function degree(point) {
+        return [[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy]) => map[point.y + dy]?.[point.x + dx] === '.').length;
+      }
+
+      function configureObjects(config) {
+        const floor = [];
+        for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) if (map[y][x] === '.') floor.push({ x, y });
+        const deadEnds = floor.filter(p => degree(p) === 1);
+        const positionPool = deadEnds.length >= 3 ? deadEnds : floor;
+        const home1 = positionPool[0];
+        const rankedExits = positionPool
+          .filter(p => key(p) !== key(home1))
+          .map(p => ({ p, distance: (findRoute(home1, p) || []).length }))
+          .sort((a,b) => b.distance - a.distance);
+        exitPoint = rankedExits[0].p;
+        robots = [
+          { id: 1, home: { ...home1 }, pos: { ...home1 }, busy: false, state: 'свободен', carrying: '' }
+        ];
+        const excluded = new Set([key(home1), key(exitPoint)]);
+        const reachable = floor.filter(p => !excluded.has(key(p)) && findRoute(home1, p));
+        const ranked = reachable.map(p => ({ p, distance: findRoute(exitPoint, p).length })).sort((a,b) => b.distance - a.distance);
+        const indexes = [0, Math.floor(ranked.length * .4), Math.floor(ranked.length * .72)];
+        products = new Map();
+        ['1','2','3'].forEach((number, i) => products.set(number, { ...ranked[indexes[i]].p, isolated: false }));
+        if (config.isolated) products.set('9', { x: 10, y: 6, isolated: true });
+      }
+
+      function render() {
+        gridEl.style.gridTemplateColumns = `repeat(${W}, 1fr)`;
+        const fragment = document.createDocumentFragment();
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+          const cell = document.createElement('span');
+          const positionKey = `${x},${y}`;
+          cell.className = map[y][x] === '#' ? 'cell wall' : 'cell floor';
+          cell.textContent = map[y][x] === '#' ? '█' : '·';
+          if (trail.has(positionKey) && map[y][x] !== '#') cell.classList.add('trail');
+          if (x === exitPoint.x && y === exitPoint.y) { cell.textContent = 'E'; cell.classList.add('exit'); }
+          for (const [number, point] of products) {
+            if (point.x === x && point.y === y) { cell.textContent = number; cell.className = 'cell item'; }
+          }
+          const robot = robots.find(item => item.pos.x === x && item.pos.y === y);
+          if (robot) { cell.textContent = 'R'; cell.className = 'cell robot'; }
+          fragment.appendChild(cell);
+        }
+        gridEl.replaceChildren(fragment);
+      }
+
+      function log(message, type = '') {
+        const line = document.createElement('div');
+        if (type) line.className = type;
+        line.textContent = message;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function refreshPanel() {
+        doneEl.textContent = failed ? `${completed} · ошибок ${failed}` : String(completed);
+        queueValueEl.textContent = String(orderQueue.length);
+        queueLineEl.innerHTML = orderQueue.length
+          ? `QUEUE: <strong>${orderQueue.map(order => `№${order.product}`).join(' → ')}</strong>`
+          : 'QUEUE: <strong>пусто</strong>';
+        robots.forEach((robot, index) => { robotStateEls[index].textContent = robot.state; });
+        const busyCount = robots.filter(robot => robot.busy).length;
+        statusEl.textContent = busyCount ? `В РАБОТЕ: ${busyCount}` : 'ГОТОВ';
+        render();
+      }
+
+      async function animate(robot, path, token, motionState = 'движется') {
+        if (!path) return false;
+        const destination = path.at(-1) || robot.pos;
+        let route = [...path];
+        let index = 0;
+        let waits = 0;
+        while (index < route.length) {
+          if (token !== generation) return false;
+          const point = route[index];
+          const pointKey = key(point);
+          const occupied = robots.some(other => other.id !== robot.id && key(other.pos) === pointKey);
+          const reservedBy = reservations.get(pointKey);
+          if (!occupied && (!reservedBy || reservedBy === robot.id)) {
+            reservations.set(pointKey, robot.id);
+            robot.state = robot.carrying ? `несёт №${robot.carrying}` : motionState;
+            refreshPanel();
+            await sleep(stepDelay);
+            if (token !== generation) { reservations.delete(pointKey); return false; }
+            trail.add(key(robot.pos));
+            robot.pos = { ...point };
+            reservations.delete(pointKey);
+            index++;
+            waits = 0;
+            render();
+            continue;
+          }
+          waits++;
+          robot.state = 'уступает путь';
+          refreshPanel();
+          if (waits % 4 === 0) {
+            const blocked = new Set(robots.filter(other => other.id !== robot.id).map(other => key(other.pos)));
+            for (const [cell, owner] of reservations) if (owner !== robot.id) blocked.add(cell);
+            const alternative = findRoute(robot.pos, destination, blocked);
+            if (alternative) { route = alternative; index = 0; }
+          }
+          await sleep(Math.max(45, Math.floor(stepDelay / 3)));
+        }
+        return token === generation;
+      }
+
+      async function execute(robot, order, token) {
+        robot.busy = true;
+        robot.state = `заказ №${order.product}`;
+        log(`[assign] Заказ №${order.product} → ROBOT`, 'info');
+        refreshPanel();
+        try {
+          await (async () => {
+            robot.state = `к товару №${order.product}`;
+            refreshPanel();
+            const target = products.get(order.product);
+            const toProduct = findRoute(robot.pos, target);
+            if (!toProduct) {
+              failed++;
+              log(`[warning] Товар №${order.product} недоступен. Программа продолжает работу.`, 'warn');
+              return;
+            }
+            log(`[move] ROBOT движется к товару №${order.product}`);
+            if (!await animate(robot, toProduct, token)) return;
+            robot.carrying = order.product;
+            robot.state = `несёт №${order.product}`;
+            log(`[pick] ROBOT получил товар №${order.product}`, 'ok');
+            refreshPanel();
+            await sleep(stepDelay);
+            const toExit = findRoute(robot.pos, exitPoint);
+            if (!toExit || !await animate(robot, toExit || [], token)) return;
+            completed++;
+            robot.carrying = '';
+            log(`[done] Заказ №${order.product} доставлен за ${toProduct.length + toExit.length} шагов`, 'ok');
+            robot.state = 'возвращается в док';
+            log('[return] ROBOT возвращается в стартовую точку');
+            refreshPanel();
+            const homeward = findRoute(robot.pos, robot.home);
+            if (homeward && !await animate(robot, homeward, token, 'возвращается в док')) return;
+          })();
+        } finally {
+          if (token !== generation) return;
+          robot.busy = false;
+          robot.state = 'свободен';
+          refreshPanel();
+          dispatch();
+        }
+      }
+
+      function dispatch() {
+        if (!orderQueue.length) { refreshPanel(); return; }
+        for (const robot of robots) {
+          if (robot.busy || !orderQueue.length) continue;
+          const order = orderQueue.shift();
+          execute(robot, order, generation);
+        }
+        refreshPanel();
+      }
+
+      function submitOrder(event) {
+        event.preventDefault();
+        const product = orderInput.value.trim();
+        const command = product.toLowerCase();
+        orderInput.value = '';
+        orderInput.focus();
+        if (command === 'reset') { resetDemo(); return; }
+        if (command === 'random') {
+          const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+          const loops = Math.floor(Math.random() * 17);
+          const isolated = Math.random() < .3;
+          const topology = isolated ? 'с изолированным товаром' : loops === 0 ? 'с тупиками' : 'с циклами и тупиками';
+          resetDemo(variantIndex, { name: 'СЛУЧАЙНАЯ КАРТА', note: `seed ${seed}`, seed, loops, isolated });
+          log(`[generator] Создана карта ${topology} · циклов: ${loops}`, 'ok');
+          return;
+        }
+        if (command === 'help') {
+          log('[help] Введите номер товара. Команды: random, reset, help.', 'info');
+          return;
+        }
+        if (!/^\d+$/.test(product)) {
+          log('[warning] Введите числовой номер товара.', 'warn');
+          statusEl.textContent = 'НЕВЕРНЫЙ ВВОД';
+          return;
+        }
+        if (!products.has(product)) {
+          failed++;
+          log(`[warning] Товара №${product} нет на складе. Заказ отклонён, система продолжает работу.`, 'warn');
+          refreshPanel();
+          return;
+        }
+        if (!robots.some(robot => findRoute(robot.home, products.get(product)))) {
+          failed++;
+          log(`[warning] Товар №${product} найден, но недоступен. Заказ пропущен без остановки.`, 'warn');
+          refreshPanel();
+          return;
+        }
+        orderQueue.push({ id: ++orderSequence, product });
+        log(`[queue] Принят заказ №${product}${robots.every(robot => robot.busy) ? ' · робот занят' : ''}`);
+        refreshPanel();
+        dispatch();
+      }
+
+      function resetDemo(index = variantIndex, customConfig = null) {
+        generation++;
+        let config = customConfig;
+        if (!config) {
+          variantIndex = (index + variants.length) % variants.length;
+          config = variants[variantIndex];
+        }
+        map = makeMaze(config);
+        orderQueue = [];
+        completed = 0;
+        failed = 0;
+        orderSequence = 0;
+        trail = new Set();
+        reservations = new Map();
+        configureObjects(config);
+        mapNameEl.textContent = `${config.name} · ${config.note}`;
+        logEl.innerHTML = `<span class="info">[system]</span> ${config.name} загружена\n<span class="info">[stock]</span> Доступные номера: ${[...products.keys()].join(', ')}\n<span class="ok">[ready]</span> Введите номер товара`;
+        refreshPanel();
+      }
+
+      orderForm.addEventListener('submit', submitOrder);
+      resetDemo();
+    })();
+  </script>
+</body>
+</html>
