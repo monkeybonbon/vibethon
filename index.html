@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="Интерактивное техническое задание антихакатона: система управления умным складом на Python.">
+  <meta name="description" content="Интерактивные технические задания антихакатона: умный склад и техническое зрение робота.">
   <title>Антихакатон: Умный склад</title>
   <style>
     :root {
@@ -24,6 +24,7 @@
     }
 
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
@@ -55,6 +56,22 @@
     nav { display: flex; gap: 22px; }
     nav a { color: var(--muted); font-size: 14px; text-decoration: none; transition: color .2s; }
     nav a:hover, nav a:focus-visible { color: var(--green); }
+
+    .track-switch { display: flex; gap: 6px; }
+    .track-switch button {
+      padding: 6px 13px;
+      cursor: pointer;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(16, 31, 30, .7);
+      font: 11px "Cascadia Code", Consolas, monospace;
+      white-space: nowrap;
+      transition: color .2s, border-color .2s, background .2s;
+    }
+    .track-switch button:hover { color: var(--text); border-color: #2f5a54; }
+    .track-switch button[aria-current="true"] { color: #07100f; border-color: var(--green); background: var(--green); }
+    .track-switch button:focus-visible { outline: 3px solid rgba(99,201,255,.35); outline-offset: 2px; }
 
     header { padding: 88px 0 52px; }
     .eyebrow { color: var(--green); font-size: 12px; text-transform: uppercase; letter-spacing: .16em; }
@@ -131,8 +148,40 @@
     .cell.exit { color: var(--blue); background: transparent; text-shadow: 0 0 10px rgba(99,201,255,.45); }
     .cell.robot { color: var(--green); background: transparent; box-shadow: none; transform: none; border-radius: 0; text-shadow: 0 0 9px rgba(96,240,165,.8); }
     .cell.trail { color: #426158; background: transparent; }
+
+    .camera-view { position: relative; width: 100%; max-width: 560px; aspect-ratio: 4 / 3; overflow: hidden; background: #090c0b; }
+    .camera-view canvas { display: block; width: 100%; height: 100%; }
+    .browser-bar { display: flex; align-items: center; gap: 11px; height: 44px; padding: 0 13px; border-bottom: 1px solid #313633; background: linear-gradient(#272c29, #1b1f1d); }
+    .browser-nav { flex: none; color: #6a746f; font: 13px "Cascadia Code", Consolas, monospace; letter-spacing: .3em; }
+    .address { flex: 1; min-width: 0; height: 26px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #3c4542; border-radius: 13px; background: #121614; color: #7f8c87; font: 11px "Cascadia Code", Consolas, monospace; white-space: nowrap; overflow: hidden; }
+    .address i { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .address b { color: #d3ded9; font-weight: 500; }
+    .dashboard { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(215px, .85fr); background: #090c0b; }
+    .view-panel { min-width: 0; padding: 18px; border-right: 1px solid #1c2320; }
+    .side-panel { display: flex; flex-direction: column; gap: 18px; min-width: 0; padding: 18px; }
+    .panel-title { color: #66736e; font: 10px "Cascadia Code", Consolas, monospace; letter-spacing: .14em; text-transform: uppercase; }
+    .state-tile { margin-top: 7px; padding: 13px 14px; border: 1px solid var(--green-2); border-radius: 3px; background: rgba(31, 199, 122, .07); }
+    .state-tile strong { display: block; color: var(--green); font: 700 25px/1.1 "Cascadia Code", Consolas, monospace; }
+    .state-tile span { display: block; margin-top: 5px; color: #8a968f; font-size: 12px; }
+    .state-tile.halted { border-color: var(--red); background: rgba(255, 126, 134, .08); }
+    .state-tile.halted strong { color: var(--red); }
+    .panel-list { display: grid; gap: 6px; margin: 7px 0 0; padding: 0; list-style: none; }
+    .panel-list li { display: flex; justify-content: space-between; gap: 10px; color: #a3b0aa; font: 11px/1.45 "Cascadia Code", Consolas, monospace; }
+    .panel-list li + li { margin-top: 0; }
+    .panel-list em { font-style: normal; color: #66736e; }
+    .panel-list .free { color: var(--green); }
+    .panel-list .zone { color: var(--amber); }
+    .panel-list .stop { color: var(--red); }
+    .panel-list .empty { color: #59645e; }
+    .panel-list time { flex: none; color: #5c6862; }
+    .panel-list.events li { justify-content: flex-start; }
+    .scene-controls { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; padding-top: 13px; border-top: 1px dashed #35403b; }
+    .scene-note { margin-top: 9px; color: #505b56; font: 9px/1.5 "Cascadia Code", Consolas, monospace; }
     .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 13px; color: var(--muted); font: 11px "Cascadia Code", Consolas, monospace; }
     .legend b { color: var(--text); }
+    .legend b.z-free { color: var(--green); }
+    .legend b.z-watch { color: var(--amber); }
+    .legend b.z-stop { color: var(--red); }
     .caption { margin: 16px 0 0; color: var(--muted); font-size: 13px; }
 
     .console-panel { display: flex; flex-direction: column; min-width: 0; padding: 18px; }
@@ -214,6 +263,7 @@
     .bonus-card { position: relative; padding: 22px 78px 22px 22px; overflow: hidden; border: 1px solid rgba(255,201,104,.3); border-radius: var(--radius); background: linear-gradient(135deg, rgba(255,201,104,.075), rgba(13,25,24,.8)); }
     .bonus-card h3 { color: #f2dfb4; }
     .bonus-card p { margin: 0; color: var(--muted); font-size: 14px; }
+    .bonus-card.wide { grid-column: 1 / -1; }
     .bonus-score { position: absolute; top: 18px; right: 18px; color: var(--amber); font: 800 20px "Cascadia Code", Consolas, monospace; }
     .final-callout { padding: 28px; border: 1px solid rgba(99,201,255,.28); border-radius: var(--radius); background: linear-gradient(120deg, rgba(99,201,255,.08), rgba(96,240,165,.05)); font-size: 18px; }
     .criteria { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
@@ -222,12 +272,17 @@
     footer .wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
     .to-top { text-decoration: none; color: var(--green); }
 
+    @media (max-width: 980px) {
+      .topbar nav { display: none; }
+    }
     @media (max-width: 850px) {
       .demo-body { display: block; }
       .map-panel { border-right: 0; }
       .card, .card.third { grid-column: 1 / -1; }
       .requirements { grid-template-columns: 1fr 1fr; }
       .steps { grid-template-columns: repeat(2, 1fr); }
+      .dashboard { grid-template-columns: 1fr; }
+      .view-panel { border-right: 0; border-bottom: 1px solid #1c2320; }
     }
     @media (max-width: 620px) {
       .wrap { width: min(100% - 24px, 1120px); }
@@ -241,6 +296,8 @@
       .controls { flex-direction: column; }
       .order-form { flex-wrap: nowrap; }
       .steps { grid-template-columns: 1fr 1fr; }
+      .topbar .wrap { gap: 12px; }
+      .track-switch button { padding: 6px 10px; font-size: 10px; }
       footer .wrap { align-items: flex-start; flex-direction: column; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -252,16 +309,27 @@
 <body id="top">
   <div class="topbar">
     <div class="wrap">
-      <a class="brand" href="#top"><span>&gt;_</span> smart_warehouse</a>
-      <nav aria-label="Навигация по заданию">
+      <a class="brand" href="#top"><span>&gt;_</span> <span id="brandName" style="color:inherit">smart_warehouse</span></a>
+      <div class="track-switch" role="group" aria-label="Выбор технического задания">
+        <button type="button" data-track="warehouse" aria-current="true">01 · Умный склад</button>
+        <button type="button" data-track="vision" aria-current="false">02 · Глаза робота</button>
+      </div>
+      <nav id="navWarehouse" aria-label="Навигация по заданию «Умный склад»">
         <a href="#demo">Демонстрация</a>
         <a href="#task">Задача</a>
         <a href="#requirements">Требования</a>
         <a href="#check">Проверка</a>
       </nav>
+      <nav id="navVision" aria-label="Навигация по заданию «Глаза робота»" hidden>
+        <a href="#v-demo">Демонстрация</a>
+        <a href="#v-task">Задача</a>
+        <a href="#v-requirements">Требования</a>
+        <a href="#v-check">Проверка</a>
+      </nav>
     </div>
   </div>
 
+  <div class="track" id="track-warehouse">
   <header class="wrap">
     <div class="eyebrow">Техническое задание // 01</div>
     <h1>Антихакатон:<br>Умный склад</h1>
@@ -462,6 +530,266 @@
       <a class="to-top" href="#top">↑ Наверх</a>
     </div>
   </footer>
+  </div>
+  <!-- ================= ТЗ 02 · ГЛАЗА РОБОТА ================= -->
+  <div class="track" id="track-vision" hidden>
+    <header class="wrap">
+      <div class="eyebrow">Техническое задание // 02</div>
+      <h1>Антихакатон:<br>Глаза робота</h1>
+      <p class="lead">Разработайте систему технического зрения, которая решает, может ли робот ехать дальше.</p>
+      <div class="badges" aria-label="Условия участия">
+        <span class="badge">Python</span>
+        <span class="badge">Команда 3 человека</span>
+        <span class="badge">Можно использовать LLM</span>
+        <span class="badge">Камера ноутбука или телефона</span>
+        <span class="badge">Готовые модели разрешены</span>
+      </div>
+    </header>
+
+    <main>
+      <section id="v-demo">
+        <div class="wrap">
+          <p class="section-kicker">Интерактивный пример</p>
+          <h2>Как может выглядеть программа</h2>
+          <p class="intro">Добавьте предмет в кадр и посмотрите, как система принимает решение. Пока объект далеко или в стороне — робот едет. Как только он приближается в зоне контроля — движение блокируется.</p>
+
+          <div class="demo-shell">
+            <div class="browser-bar" aria-hidden="true">
+              <i class="dot"></i><i class="dot"></i><i class="dot"></i>
+              <span class="browser-nav">←&nbsp;→&nbsp;⟳</span>
+              <span class="address"><i></i>http://<b>192.168.1.42:8000</b></span>
+            </div>
+            <div class="dashboard">
+              <div class="view-panel">
+                <div class="demo-head">
+                  <strong class="mono" id="v-camName">КАМЕРА 0 · 640×480</strong>
+                  <span class="status-line" id="v-status">ПОТОК ИДЁТ</span>
+                </div>
+                <div class="camera-view">
+                  <canvas id="v-view" width="1120" height="840" role="img" aria-label="Вид с камеры робота: найденные предметы и зона контроля"></canvas>
+                </div>
+                <div class="legend" aria-label="Условные обозначения">
+                  <span><b class="z-free">▭</b> вне зоны</span><span><b class="z-watch">▭</b> в зоне, далеко</span><span><b class="z-stop">▭</b> в зоне, близко</span><span><b>┆ ┆</b> зона контроля</span>
+                </div>
+                <div class="scene-controls" id="v-controls">
+                  <button class="btn btn-secondary" type="button" data-object="коробка">Коробка</button>
+                  <button class="btn btn-secondary" type="button" data-object="человек">Человек</button>
+                  <button class="btn btn-secondary" type="button" data-object="стул">Стул</button>
+                  <button class="btn btn-secondary" type="button" data-object="стол">Стол</button>
+                  <button class="btn btn-secondary" type="button" data-action="clear">Очистить кадр</button>
+                </div>
+                <div class="scene-note">кнопки заменяют реальные предметы перед камерой</div>
+              </div>
+              <div class="side-panel">
+                <div>
+                  <div class="panel-title">Робот</div>
+                  <div class="state-tile" id="v-state">
+                    <strong id="v-stateText">ЕХАТЬ</strong>
+                    <span id="v-reason">путь свободен</span>
+                  </div>
+                </div>
+                <div>
+                  <div class="panel-title">В кадре</div>
+                  <ul class="panel-list" id="v-objects"><li class="empty">в кадре ничего нет</li></ul>
+                </div>
+                <div>
+                  <div class="panel-title">События</div>
+                  <ul class="panel-list events" id="v-events"><li class="empty">событий пока нет</li></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="caption">Здесь показан веб-пульт, потому что так нагляднее. Обязательная часть — то, что видно на экране: кадр, рамки и состояние. Отдавать их в браузер или рисовать прямо в окне программы — ваше решение.</p>
+        </div>
+      </section>
+
+      <section id="v-task">
+        <div class="wrap">
+          <p class="section-kicker">Техническое задание</p>
+          <h2>Система технического зрения</h2>
+          <p class="intro">Робот-погрузчик едет по складу и не должен ни в кого врезаться. Единственный датчик, который у него есть, — камера, смотрящая вперёд. Всё, что находится перед роботом, он видит только через неё.</p>
+          <p class="intro">Ваша задача — написать на Python программу, которая получает видео с камеры, находит на нём препятствия и на каждом кадре отвечает на один вопрос: роботу можно ехать или он должен стоять.</p>
+
+          <div class="task-grid">
+            <article class="card">
+              <span class="num">01</span>
+              <h3>Видеопоток</h3>
+              <p>Программа работает с камерой ноутбука или телефона в реальном времени.</p>
+              <ul>
+                <li>кадры идут непрерывно, а не читаются из папки с фотографиями;</li>
+                <li>изображение видно на экране во время работы;</li>
+                <li>решение пересматривается по ходу, а не один раз при запуске.</li>
+              </ul>
+            </article>
+            <article class="card">
+              <span class="num">02</span>
+              <h3>Что считается препятствием</h3>
+              <p>Система находит в кадре предметы, в которые робот может врезаться: <strong>стол, стул, человек, коробка</strong>.</p>
+              <p>Найденный объект должен быть показан на изображении: рамка вокруг него и подпись, что это такое.</p>
+            </article>
+            <article class="card wide">
+              <span class="num">03</span>
+              <h3>Состояние робота: ЕХАТЬ или СТОЯТЬ</h3>
+              <p>Главный результат работы программы — это не рамки на картинке, а состояние робота. Оно принимает ровно два значения и видно человеку в любой момент:</p>
+              <pre><code>ROBOT: ЕХАТЬ    путь свободен
+ROBOT: СТОЯТЬ   причина: коробка в зоне контроля</code></pre>
+              <p>Не всякий найденный предмет мешает ехать. Стул у дальней стены робота не касается, а коробка прямо по курсу — касается. Значит, кроме самой детекции нужно правило: <strong>какая часть кадра считается «прямо по курсу» и что в ней считается достаточно близким</strong>. Это правило придумываете вы, и на защите вас попросят его объяснить.</p>
+              <ol class="steps">
+                <li>Получить кадр</li>
+                <li>Найти объекты</li>
+                <li>Отсечь лишние</li>
+                <li>Оценить близость</li>
+                <li>Принять решение</li>
+                <li>Показать на кадре</li>
+                <li>Записать в журнал</li>
+              </ol>
+              <p>Состояние не должно «дребезжать»: если предмет неподвижно стоит перед камерой, надпись не может десять раз в секунду прыгать между ЕХАТЬ и СТОЯТЬ. Как этого добиться — часть вашего решения.</p>
+            </article>
+            <article class="card">
+              <span class="num">04</span>
+              <h3>Журнал событий</h3>
+              <p>Каждая смена состояния записывается: что произошло, из-за какого объекта и когда.</p>
+              <p>По журналу человек, который не видел экрана, должен понять, почему робот остановился.</p>
+            </article>
+            <article class="card">
+              <span class="num">05</span>
+              <h3>Входные данные</h3>
+              <p>Номер камеры, границы зоны контроля и пороги срабатывания хранятся отдельно от логики: в константах, файле настроек или аргументах запуска.</p>
+              <p>Другая камера и другая комната не должны требовать изменения кода программы.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="v-requirements">
+        <div class="wrap">
+          <p class="section-kicker">Обязательная часть</p>
+          <h2>Что должно работать</h2>
+          <p class="intro">Способ реализации выбираете вы. В финальной версии должны присутствовать следующие возможности.</p>
+          <div class="requirements">
+            <article class="req"><h3>Живой поток</h3><p>Изображение с камеры в реальном времени, видимое на экране.</p></article>
+            <article class="req"><h3>Детекция</h3><p>Поиск препятствий в кадре с рамками и подписями классов.</p></article>
+            <article class="req"><h3>Зона контроля</h3><p>Явно заданная область кадра, по которой принимается решение.</p></article>
+            <article class="req"><h3>Состояние робота</h3><p>ЕХАТЬ или СТОЯТЬ на каждом кадре, без дребезга и задержек.</p></article>
+            <article class="req"><h3>Журнал</h3><p>Запись смены состояния с указанием причины.</p></article>
+            <article class="req"><h3>Устойчивость</h3><p>Нет камеры, пустой кадр, темнота — программа не падает.</p></article>
+          </div>
+
+          <div class="task-grid">
+            <article class="card wide">
+              <h3>Что видно во время работы</h3>
+              <p>На кадре — рамки найденных предметов, границы зоны контроля и текущее состояние. В консоли — то, что происходит по шагам.</p>
+              <pre><code>[camera] устройство 0 · 640x480 · 28 fps
+[detect] коробка   conf 0.91   в зоне: да    ~ 48 см
+[detect] стул      conf 0.77   в зоне: нет   ~ 210 см
+[state]  ЕХАТЬ -> СТОЯТЬ   причина: коробка в зоне контроля
+[state]  СТОЯТЬ -> ЕХАТЬ   причина: зона свободна 12 кадров подряд</code></pre>
+              <p>Наложение на кадр и вывод в консоль не обязаны выглядеть именно так, но состояние робота должно читаться с экрана без пояснений.</p>
+            </article>
+          </div>
+
+          <div class="notice">
+            <h3>Ограничения</h3>
+            <p>Python · команда из 3 человек · разрешено использовать LLM · разрешены готовые библиотеки компьютерного зрения и предобученные модели · обучать свою модель не требуется · камера ноутбука или телефона · финальная сцена, предметы и освещение заранее неизвестны · решение должно запускаться в незнакомом помещении.</p>
+          </div>
+          <div class="bonus-grid" aria-label="Дополнительные баллы">
+            <article class="bonus-card wide">
+              <span class="bonus-score">5+</span>
+              <h3>Пульт оператора</h3>
+              <p>Страница в браузере, на которой видно то, что система видит <strong>прямо сейчас</strong>: состояние робота, найденные предметы и причину остановки. Обновляется сама, без перезагрузки. Проверка простая: заказчик открывает адрес на своём телефоне, проходит перед камерой ноутбука и видит СТОЯТЬ. Дальше по возможности — само изображение с камеры с рамками и полоса за последнюю минуту, на которой видно, где робот ехал, а где стоял.</p>
+            </article>
+            <article class="bonus-card">
+              <span class="bonus-score">5+</span>
+              <h3>Расстояние до объекта</h3>
+              <p>Оценка расстояния до препятствия в сантиметрах, а не только «близко / далеко». Понадобится объект известного размера — придумайте, какой.</p>
+            </article>
+            <article class="bonus-card">
+              <span class="bonus-score">5+</span>
+              <h3>Куда объехать</h3>
+              <p>Разделите зону перед роботом на три части и отвечайте не «занято», а «слева свободно, по центру занято, справа свободно». Робот, который знает, куда свернуть, полезнее робота, который просто стоит.</p>
+            </article>
+            <article class="bonus-card">
+              <span class="bonus-score">5+</span>
+              <h3>Журнал инцидентов</h3>
+              <p>Каждый раз, когда робот останавливается, сохраняйте кадр в отдельную папку — со временем и причиной. После демонстрации папку можно открыть и увидеть, на что система реагировала на самом деле.</p>
+            </article>
+            <article class="bonus-card">
+              <span class="bonus-score">5+</span>
+              <h3>Камера телефона</h3>
+              <p>Источником кадров работает камера телефона, а не ноутбука. Робот на складе ездит с той камерой, которую на него поставили, — программа не должна зависеть от того, чем именно снимают.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="v-check">
+        <div class="wrap">
+          <p class="section-kicker">Финальная проверка</p>
+          <h2>Новая комната. Новые предметы.</h2>
+          <div class="final-callout">В конце антихакатона программа будет запущена в другом помещении, при другом освещении и с предметами, которые вы заранее не увидите.</div>
+          <div class="check-list" aria-label="Критерии проверки">
+            <div>Корректность решений</div>
+            <div>Скорость реакции</div>
+            <div>Отсутствие ложных срабатываний</div>
+            <div>Отсутствие падений</div>
+            <div>Понятность визуализации</div>
+            <div>Качество организации проекта</div>
+          </div>
+          <div class="notice">
+            <h3>Будьте готовы к изменениям требований</h3>
+            <p>Во время антихакатона заказчик может изменить требования к системе. Новые условия будут объявляться отдельно. Хорошее решение должно быть возможно развивать без полного переписывания проекта.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <span>Антихакатон · Техническое задание «Глаза робота»</span>
+        <a class="to-top" href="#top">↑ Наверх</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    /* переключение между двумя ТЗ; трек хранится в адресе страницы */
+    (() => {
+      'use strict';
+      const tracks = {
+        warehouse: { panel: document.getElementById('track-warehouse'), nav: document.getElementById('navWarehouse'), brand: 'smart_warehouse', title: 'Антихакатон: Умный склад' },
+        vision:    { panel: document.getElementById('track-vision'),    nav: document.getElementById('navVision'),    brand: 'robot_vision',    title: 'Антихакатон: Глаза робота' }
+      };
+      const buttons = [...document.querySelectorAll('.track-switch button')];
+      const brandEl = document.getElementById('brandName');
+
+      const fromHash = () => {
+        const hash = location.hash.slice(1);
+        return (hash === 'vision' || hash.startsWith('v-')) ? 'vision' : 'warehouse';
+      };
+
+      function apply(name) {
+        Object.entries(tracks).forEach(([key, track]) => {
+          const active = key === name;
+          track.panel.hidden = !active;
+          track.nav.hidden = !active;
+        });
+        buttons.forEach(button => button.setAttribute('aria-current', String(button.dataset.track === name)));
+        brandEl.textContent = tracks[name].brand;
+        document.title = tracks[name].title;
+      }
+
+      buttons.forEach(button => button.addEventListener('click', () => {
+        const name = button.dataset.track;
+        apply(name);
+        window.scrollTo({ top: 0 });
+        // адрес обновляем отдельно: под file:// он может быть недоступен, но переключение уже произошло
+        try { history.replaceState(null, '', '#' + name); } catch (error) { /* ссылку на трек просто не обновляем */ }
+      }));
+
+      window.addEventListener('hashchange', () => apply(fromHash()));
+      apply(fromHash());
+    })();
+  </script>
 
   <script type="application/x-smart-warehouse-legacy">
     (() => {
@@ -987,6 +1315,236 @@
 
       orderForm.addEventListener('submit', submitOrder);
       resetDemo();
+    })();
+  </script>
+  <script>
+    /* ТЗ 02 · демонстрация технического зрения */
+    (() => {
+      'use strict';
+
+      const panel = document.getElementById('track-vision');
+      const canvas = document.getElementById('v-view');
+      const ctx = canvas.getContext('2d');
+      const statusEl = document.getElementById('v-status');
+      const tileEl = document.getElementById('v-state');
+      const stateTextEl = document.getElementById('v-stateText');
+      const reasonEl = document.getElementById('v-reason');
+      const objectsEl = document.getElementById('v-objects');
+      const eventsEl = document.getElementById('v-events');
+      const controlsEl = document.getElementById('v-controls');
+
+      const W = canvas.width, H = canvas.height;
+      const FOCAL = 900;              // условное фокусное расстояние в пикселях
+      const ZONE = { left: .32, right: .68 };
+      const NEAR_RATIO = .34;         // рамка выше трети кадра считается «близко»
+      const HOLD_FRAMES = 12;         // столько кадров решение должно держаться, чтобы состояние не дребезжало
+      const MAX_EVENTS = 5;
+      const MAX_OBJECTS = 4;
+
+      const CATALOG = {
+        'коробка': { w: 42,  h: 38,  conf: .91, offset: 6,   from: 420 },
+        'человек': { w: 52,  h: 168, conf: .95, offset: -14, from: 520 },
+        'стул':    { w: 46,  h: 92,  conf: .78, offset: -78, from: 380 },
+        'стол':    { w: 128, h: 74,  conf: .83, offset: 92,  from: 460 }
+      };
+
+      let objects = [];
+      let events = [];
+      let state = 'ЕХАТЬ';
+      let pendingState = 'ЕХАТЬ';
+      let pendingFor = 0;
+      let reason = 'путь свободен';
+      let paintedState = '';
+      let paintedReason = '';
+      let objectsSignature = '';
+
+      const escape = text => String(text).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
+
+      function addEvent(text) {
+        events.unshift({ time: new Date().toLocaleTimeString('ru-RU'), text });
+        if (events.length > MAX_EVENTS) events.pop();
+        eventsEl.innerHTML = events
+          .map(item => `<li><time>${item.time}</time><span>${escape(item.text)}</span></li>`)
+          .join('');
+      }
+
+      function paintState() {
+        if (state === paintedState && reason === paintedReason) return;
+        paintedState = state;
+        paintedReason = reason;
+        stateTextEl.textContent = state;
+        reasonEl.textContent = reason;
+        tileEl.classList.toggle('halted', state === 'СТОЯТЬ');
+        statusEl.textContent = state === 'СТОЯТЬ' ? 'ДВИЖЕНИЕ ЗАБЛОКИРОВАНО' : 'ПОТОК ИДЁТ';
+      }
+
+      function paintObjects(report) {
+        const signature = report.map(e => `${e.item.name}:${e.verdict.dist}:${e.verdict.inZone}:${e.verdict.blocking}`).join('|');
+        if (signature === objectsSignature) return;
+        objectsSignature = signature;
+        objectsEl.innerHTML = report.length
+          ? report.slice().sort((a, b) => a.verdict.dist - b.verdict.dist).map(({ item, verdict }) => {
+              const tone = verdict.blocking ? 'stop' : verdict.inZone ? 'zone' : 'free';
+              const where = verdict.inZone ? 'в зоне' : 'вне зоны';
+              return `<li><span>${escape(item.name)} <em>${item.spec.conf.toFixed(2)}</em></span>`
+                   + `<span class="${tone}">${where} · ${verdict.dist} см</span></li>`;
+            }).join('')
+          : '<li class="empty">в кадре ничего нет</li>';
+      }
+
+      function spawn(name, fixedDistance) {
+        const spec = CATALOG[name];
+        const settled = fixedDistance ?? (55 + Math.random() * 35);
+        objects.push({ name, spec, dist: fixedDistance ?? spec.from, settled });
+        addEvent(`в кадре ${name} · conf ${spec.conf.toFixed(2)}`);
+      }
+
+      function project(item) {
+        const scale = FOCAL / item.dist;
+        const width = item.spec.w * scale;
+        const height = item.spec.h * scale;
+        const centerX = W / 2 + item.spec.offset * scale;
+        const groundY = H * .74 + (H * .2) * (120 / item.dist);
+        return { x: centerX - width / 2, y: groundY - height, w: width, h: height };
+      }
+
+      function classify(box, item) {
+        const inZone = box.x + box.w > W * ZONE.left && box.x < W * ZONE.right;
+        const near = box.h > H * NEAR_RATIO;
+        return { inZone, blocking: inZone && near, dist: Math.round(item.dist) };
+      }
+
+      function drawScene(report) {
+        ctx.fillStyle = '#090c0b';
+        ctx.fillRect(0, 0, W, H);
+
+        // грубая перспектива, чтобы кадр читался как вид вперёд
+        const horizon = H * .40;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#16211f';
+        ctx.beginPath();
+        ctx.moveTo(0, horizon);
+        ctx.lineTo(W, horizon);
+        ctx.stroke();
+        ctx.strokeStyle = '#121c1a';
+        for (let i = -6; i <= 6; i++) {
+          ctx.beginPath();
+          ctx.moveTo(W / 2 + i * (W / 12), H);
+          ctx.lineTo(W / 2 + i * (W / 46), horizon);
+          ctx.stroke();
+        }
+        for (let i = 1; i <= 7; i++) {
+          const y = horizon + (H - horizon) * Math.pow(i / 7, 2.1);
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(W, y);
+          ctx.stroke();
+        }
+
+        // зона контроля
+        ctx.setLineDash([12, 10]);
+        ctx.strokeStyle = 'rgba(99,201,255,.42)';
+        [ZONE.left, ZONE.right].forEach(part => {
+          ctx.beginPath();
+          ctx.moveTo(W * part, horizon * .55);
+          ctx.lineTo(W * part, H);
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(99,201,255,.55)';
+        ctx.font = '500 20px "Cascadia Code", Consolas, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('ЗОНА КОНТРОЛЯ', W / 2, H - 18);
+
+        // предметы: дальние рисуются первыми
+        report.slice().sort((a, b) => b.item.dist - a.item.dist).forEach(({ item, box, verdict }) => {
+          ctx.fillStyle = '#16241f';
+          ctx.strokeStyle = '#22332d';
+          ctx.lineWidth = 2;
+          ctx.fillRect(box.x, box.y, box.w, box.h);
+          ctx.strokeRect(box.x, box.y, box.w, box.h);
+
+          const color = verdict.blocking ? '#ff7e86' : verdict.inZone ? '#ffc968' : '#60f0a5';
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 3;
+          ctx.strokeRect(box.x, box.y, box.w, box.h);
+
+          const label = `${item.name} ${item.spec.conf.toFixed(2)}`;
+          ctx.font = '500 19px "Cascadia Code", Consolas, monospace';
+          ctx.textAlign = 'left';
+          const textWidth = ctx.measureText(label).width;
+          ctx.fillStyle = color;
+          ctx.fillRect(box.x, Math.max(0, box.y - 27), textWidth + 16, 26);
+          ctx.fillStyle = '#07100f';
+          ctx.fillText(label, box.x + 8, Math.max(19, box.y - 8));
+        });
+
+        // индикатор потока: состояние робота живёт на пульте справа, не на кадре
+        ctx.textAlign = 'left';
+        ctx.font = '500 19px "Cascadia Code", Consolas, monospace';
+        ctx.fillStyle = '#60f0a5';
+        ctx.fillText('● LIVE', 20, 32);
+        ctx.fillStyle = '#5d6b66';
+        ctx.fillText('640x480 · 30 fps', 118, 32);
+      }
+
+      function tick() {
+        requestAnimationFrame(tick);
+        if (panel.hidden) return;
+
+        objects.forEach(item => {
+          if (item.dist > item.settled) item.dist = Math.max(item.settled, item.dist - 2.6);
+        });
+
+        const report = objects.map(item => {
+          const box = project(item);
+          return { item, box, verdict: classify(box, item) };
+        });
+        const blockers = report.filter(entry => entry.verdict.blocking);
+        const inZone = report.filter(entry => entry.verdict.inZone);
+        const wanted = blockers.length ? 'СТОЯТЬ' : 'ЕХАТЬ';
+
+        // решение должно продержаться HOLD_FRAMES кадров, иначе состояние дребезжит
+        if (wanted === pendingState) { pendingFor++; } else { pendingState = wanted; pendingFor = 1; }
+        if (pendingState !== state && pendingFor >= HOLD_FRAMES) {
+          state = pendingState;
+          if (state === 'СТОЯТЬ') {
+            reason = `${blockers[0].item.name} в зоне контроля`;
+            addEvent(`ЕХАТЬ → СТОЯТЬ · ${reason}`);
+          } else {
+            reason = `зона свободна ${HOLD_FRAMES} кадров подряд`;
+            addEvent(`СТОЯТЬ → ЕХАТЬ · зона освободилась`);
+          }
+        }
+        if (state === 'ЕХАТЬ' && !blockers.length) {
+          reason = inZone.length ? 'объект в зоне, но далеко' : 'путь свободен';
+        }
+
+        paintState();
+        paintObjects(report);
+        drawScene(report);
+      }
+
+      controlsEl.addEventListener('click', event => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        if (button.dataset.action === 'clear') {
+          objects = [];
+          addEvent('кадр очищен');
+          return;
+        }
+        const name = button.dataset.object;
+        if (!name || !CATALOG[name]) return;
+        if (objects.length >= MAX_OBJECTS) {
+          addEvent(`в кадре уже ${MAX_OBJECTS} предмета — очистите кадр`);
+          return;
+        }
+        spawn(name);
+      });
+
+      addEvent('камера 0 подключена · 640×480');
+      spawn('стул', 230);   // предмет в кадре, но вне зоны: путь свободен
+      tick();
     })();
   </script>
 </body>
